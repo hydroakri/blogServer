@@ -32,7 +32,7 @@ public class BlogServerApplication {
 src/main/java/com/hydroakri/blogServer/entity/Post.java:
 package com.hydroakri.blogServer.entity;
 
-import java.sql.Date;
+import java.util.Date;
 import java.util.List;
 
 import jakarta.persistence.Column;
@@ -66,18 +66,6 @@ public class Post {
 
     private List<String> tags;
 
-	// public void setLikeCount(int i) {
- //         likeCount = i;
-	// }
-	//
-	// public void setViewCount(int i) {
- //        viewCount = i;
-	// }
-	//
- //    public void setDate(java.util.Date date2) {
- //        date = (Date) date2;
- //    }
-
 }
 
 src/main/java/com/hydroakri/blogServer/repository/PostRepository.java:
@@ -105,6 +93,7 @@ public interface PostService {
 
     Post savePost(Post post);
     List<Post> getAllPosts();
+    Post getPostById(Long postid);
 
 }
 
@@ -113,12 +102,15 @@ package com.hydroakri.blogServer.service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.hydroakri.blogServer.entity.Post;
 import com.hydroakri.blogServer.repository.PostRepository;
+
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class PostServiceImpl implements PostService{
@@ -138,6 +130,18 @@ public class PostServiceImpl implements PostService{
         return postRepository.findAll();
     }
 
+    @Autowired
+    public Post getPostById(Long postId){
+        Optional<Post> optionalPost = postRepository.findById(postId);
+        if(optionalPost.isPresent()){
+            Post post = optionalPost.get();
+            post.setViewCount(post.getViewCount() + 1);
+            return postRepository.save(post);
+        }else{
+            throw new EntityNotFoundException("Post Not Found");
+        }
+    }
+
 }
 
 src/main/java/com/hydroakri/blogServer/controller/PostController.java:
@@ -150,6 +154,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -157,6 +163,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.hydroakri.blogServer.entity.Post;
 import com.hydroakri.blogServer.service.PostService;
+
+import jakarta.persistence.EntityNotFoundException;
 
 
 @RestController
@@ -178,6 +186,7 @@ public class PostController {
         }
     }
 
+    @GetMapping
     public ResponseEntity<List<Post>> getAllPosts(){
         try{
             return ResponseEntity.status(HttpStatus.OK).body(postService.getAllPosts());
@@ -185,14 +194,24 @@ public class PostController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    @GetMapping("/{postId}")
+    public ResponseEntity<?> getPostById(@PathVariable Long postId){
+        try {
+            Post post = postService.getPostById(postId);
+            return ResponseEntity.ok(post);
+        } catch (EntityNotFoundException e){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
 }
 
 src/main/resources/application.properties:
 spring.application.name=blogServer
 
-spring.datasource.url=jdbc:mysql://localhost:3306/blog_server?user=root&password=root
+spring.datasource.url=jdbc:mysql://localhost:3306/blog_server
 spring.datasource.username=root
-spting.datasource.password=root
+spring.datasource.password=root
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 spring.jpa.hibernate.ddl-auto=update
