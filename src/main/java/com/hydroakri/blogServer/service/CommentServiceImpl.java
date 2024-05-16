@@ -1,6 +1,7 @@
 package com.hydroakri.blogServer.service;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,5 +35,9 @@ public class CommentServiceImpl implements CommentService{
             return commentRepository.save(comment);
         }
         throw new EntityNotFoundException("Post Not Found");
+    }
+
+    public List<Comment> getCommentsByPostId(Long postId){
+        return commentRepository.findByPostId(postId);
     }
 }
